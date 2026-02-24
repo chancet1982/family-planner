@@ -216,9 +216,13 @@ export function AdminChores() {
         <p className="text-muted-foreground mb-4">No chores yet. Add one with the button above.</p>
       )}
       <ul className="space-y-2 mb-6">
-        {(chores ?? []).map((chore) => (
-          <li key={chore.id}>
-            <Card>
+        {(chores ?? []).map((chore, index) => (
+          <li
+            key={chore.id}
+            className="animate-fade-in-up"
+            style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
+          >
+            <Card className="transition-all duration-200">
               <CardContent className="p-0">
                 <div className="flex items-center justify-between p-3 min-h-[48px] flex-wrap gap-2">
                   <div className="flex flex-wrap items-center gap-2">
@@ -267,7 +271,10 @@ export function AdminChores() {
                   </div>
                 </div>
                 {expandedId === chore.id && (
-                  <div className="px-3 pb-3 pt-0 border-t border-border space-y-3">
+                  <div
+                    className="px-3 pb-3 pt-4 border-t border-border space-y-3 animate-fade-in-up"
+                    style={{ animationDuration: '0.25s' }}
+                  >
                     <div className="space-y-2">
                       <Label>Chore name</Label>
                       <Input

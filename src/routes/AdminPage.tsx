@@ -20,7 +20,7 @@ export function AdminPage() {
   const pathname = location.pathname
 
   return (
-    <div>
+    <div className="animate-fade-in-up">
       <h1 className="text-xl font-semibold text-foreground mb-4">Administration</h1>
       <Tabs value={pathname} onValueChange={(v) => navigate(v)}>
         <TabsList className="mb-6 flex flex-wrap h-auto gap-1" aria-label="Admin sections">

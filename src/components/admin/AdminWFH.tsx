@@ -60,7 +60,7 @@ export function AdminWFH() {
   }
 
   return (
-    <section aria-labelledby="admin-wfh-heading">
+    <section aria-labelledby="admin-wfh-heading" className="animate-fade-in-up">
       <h2 id="admin-wfh-heading" className="text-lg font-medium text-foreground mb-4">
         Work from home
       </h2>
@@ -79,8 +79,12 @@ export function AdminWFH() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {parents.map((person) => (
-            <TableRow key={person.id}>
+          {parents.map((person, index) => (
+            <TableRow
+              key={person.id}
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${Math.min(index * 50, 350)}ms` }}
+            >
               <TableCell className="font-medium">{person.name}</TableCell>
               {DAYS.map((d) => (
                 <TableCell key={d} className="text-center">

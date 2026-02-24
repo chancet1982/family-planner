@@ -12,7 +12,7 @@ export function Layout() {
             to="/schedule"
             className={({ isActive }) =>
               cn(
-                'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md px-4 font-medium transition-colors',
+                'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md px-4 font-medium transition-all duration-200',
                 isActive ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               )
             }
@@ -23,7 +23,7 @@ export function Layout() {
             to="/admin"
             className={({ isActive }) =>
               cn(
-                'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md px-4 font-medium transition-colors',
+                'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md px-4 font-medium transition-all duration-200',
                 isActive ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               )
             }

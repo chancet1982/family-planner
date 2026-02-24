@@ -16,7 +16,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const loading = authLoading || (!!session && profileLoading)
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 animate-fade-in">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-4 w-32" />
       </div>

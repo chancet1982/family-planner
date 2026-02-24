@@ -279,17 +279,18 @@ export function AdminPeople() {
         <p className="text-muted-foreground mb-4">No people yet. Add one with the button above.</p>
       )}
       <ul className="space-y-2 mb-6">
-        {(people ?? []).map((person) => (
+        {(people ?? []).map((person, index) => (
           <li
             key={person.id}
             onDragOver={(e) => handleDragOver(e, person.id)}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, person.id)}
-            className={`rounded-lg overflow-hidden transition-colors  ${
+            className={`rounded-lg overflow-hidden transition-colors animate-fade-in-up ${
               draggedId === person.id ? 'opacity-50 border-border' : 'border-border'
             } ${dragOverId === person.id && draggedId !== person.id ? 'ring-2 ring-ring ring-offset-2' : ''}`}
+            style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
           >
-            <Card>
+            <Card className="transition-all duration-200">
               <CardContent className="p-3">
                 <div className="flex items-center gap-2">
                   <div
@@ -358,7 +359,10 @@ export function AdminPeople() {
                   </div>
                 </div>
                 {expandedId === person.id && (
-                  <div className="pt-3 mt-3 border-t border-border space-y-3">
+                  <div
+                    className="pt-3 mt-3 border-t border-border space-y-3 animate-fade-in-up"
+                    style={{ animationDuration: '0.25s' }}
+                  >
                     {inviteSuccess && (
                       <Alert role="status">
                         <AlertDescription>{inviteSuccess}</AlertDescription>

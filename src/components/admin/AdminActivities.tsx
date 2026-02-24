@@ -133,12 +133,9 @@ export function AdminActivities() {
     setEditOccurrences(next)
   }
 
-  const handleSaveActivity = (act: Activity) => {
-    if (!editName.trim() || !editPersonId) return
-    updateActivity.mutate(
-      { id: act.id, name: editName.trim(), person_id: editPersonId },
-      { onSuccess: () => setExpandedId(null) }
-    )
+  const saveActivity = (act: Activity, name: string, personId: string) => {
+    if (!name.trim() || !personId) return
+    updateActivity.mutate({ id: act.id, name: name.trim(), person_id: personId })
   }
 
   const handleSaveOccurrence = (occ: ActivityOccurrence) => {
@@ -320,11 +317,15 @@ export function AdminActivities() {
         <p className="text-muted-foreground mb-4">No activities yet. Add one with the button above.</p>
       )}
       <ul className="space-y-2 mb-6">
-        {activities.map((act) => {
+        {activities.map((act, index) => {
           const occs = occurrencesByActivityId.get(act.id) ?? []
           return (
-            <li key={act.id}>
-              <Card>
+            <li
+              key={act.id}
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
+            >
+              <Card className="transition-all duration-200">
                 <CardContent className="p-0">
                   <div className="flex items-center justify-between p-3 min-h-[48px] flex-wrap gap-2">
                     <div className="flex flex-wrap items-center gap-2">
@@ -355,18 +356,28 @@ export function AdminActivities() {
                     </div>
                   </div>
                   {expandedId === act.id && (
-                    <div className="px-3 pb-3 pt-0 border-t border-border space-y-3">
+                    <div
+                      className="px-3 pb-3 pt-4 border-t border-border space-y-3 animate-fade-in-up"
+                      style={{ animationDuration: '0.25s' }}
+                    >
                       <div className="space-y-2">
                         <Label>Activity name</Label>
                         <Input
                           type="text"
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
+                          onBlur={() => saveActivity(act, editName, editPersonId)}
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>Person</Label>
-                        <Select value={editPersonId} onValueChange={setEditPersonId}>
+                        <Select
+                          value={editPersonId}
+                          onValueChange={(v) => {
+                            setEditPersonId(v)
+                            saveActivity(act, editName, v)
+                          }}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select person" />
                           </SelectTrigger>
@@ -392,6 +403,9 @@ export function AdminActivities() {
                                       [occ.id]: { ...state, day_of_week: Number(v) },
                                     }))
                                   }
+                                  onOpenChange={(open) => {
+                                    if (!open) handleSaveOccurrence(occ)
+                                  }}
                                 >
                                   <SelectTrigger className="w-[140px]">
                                     <SelectValue />
@@ -411,6 +425,7 @@ export function AdminActivities() {
                                       [occ.id]: { ...state, start_time: e.target.value },
                                     }))
                                   }
+                                  onBlur={() => handleSaveOccurrence(occ)}
                                   className="w-[100px]"
                                 />
                                 <span className="text-muted-foreground">–</span>
@@ -423,11 +438,9 @@ export function AdminActivities() {
                                       [occ.id]: { ...state, end_time: e.target.value },
                                     }))
                                   }
+                                  onBlur={() => handleSaveOccurrence(occ)}
                                   className="w-[100px]"
                                 />
-                                <Button type="button" variant="outline" size="sm" onClick={() => handleSaveOccurrence(occ)}>
-                                  Save
-                                </Button>
                                 <Button
                                   type="button"
                                   variant="outline"
@@ -456,18 +469,6 @@ export function AdminActivities() {
                           </AlertDescription>
                         </Alert>
                       )}
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          onClick={() => handleSaveActivity(act)}
-                          disabled={updateActivity.isPending || !editName.trim() || !editPersonId}
-                        >
-                          {updateActivity.isPending ? 'Saving…' : 'Save name & person'}
-                        </Button>
-                        <Button type="button" variant="outline" onClick={() => setExpandedId(null)}>
-                          Cancel
-                        </Button>
-                      </div>
                     </div>
                   )}
                 </CardContent>

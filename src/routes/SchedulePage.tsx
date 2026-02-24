@@ -162,7 +162,7 @@ export function SchedulePage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col flex-1 min-h-0 animate-fade-in-up">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4 shrink-0">
         <Tabs value={viewMode} onValueChange={(v) => setView(v as 'week' | 'day')} className="w-auto self-stretch flex flex-col">
           <TabsList role="group" aria-label="View mode" className="rounded-lg h-full">
@@ -186,7 +186,7 @@ export function SchedulePage() {
         </div>
       </div>
       {viewMode === 'day' ? (
-        <Card className="min-w-[140px] max-w-2xl min-h-0 flex flex-col gap-2 overflow-auto">
+        <Card className="min-w-[140px] max-w-2xl min-h-0 flex flex-col gap-2 overflow-auto animate-fade-in-up">
           <CardContent className="p-3 flex flex-col gap-2 flex-1 min-h-0">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2 shrink-0">
               <div className="font-semibold text-foreground">{DAY_LABELS[selectedDay]}</div>
@@ -238,9 +238,13 @@ export function SchedulePage() {
               <p className="text-sm text-muted-foreground">Nothing scheduled</p>
             ) : (
               <ul className="space-y-2">
-                {(sortedDayItems[selectedDay] ?? []).map((entry) =>
+                {(sortedDayItems[selectedDay] ?? []).map((entry, i) =>
                   entry.type === 'chore' ? (
-                    <Card key={`chore-${entry.item.id}`}>
+                    <Card
+                      key={`chore-${entry.item.id}`}
+                      className="animate-fade-in-up transition-all duration-200"
+                      style={{ animationDelay: `${i * 30}ms` }}
+                    >
                       <CardContent className="text-sm p-2">
                         <span className="font-medium text-foreground">{entry.item.name}</span>
                         {(entry.item.scheduled_time || entry.item.time_of_day) && (
@@ -262,7 +266,11 @@ export function SchedulePage() {
                     const person = (people ?? []).find((p) => p.id === entry.item.person_id)
                     const { cardBg, cardBorder } = getActivityCardStyles(person?.avatar_color)
                     return (
-                      <Card key={`activity-${entry.item.id}`} className={`text-sm ${cardBg} ${cardBorder}`}>
+                      <Card
+                        key={`activity-${entry.item.id}`}
+                        className={`text-sm animate-fade-in-up transition-all duration-200 ${cardBg} ${cardBorder}`}
+                        style={{ animationDelay: `${i * 30}ms` }}
+                      >
                         <CardContent className="p-2">
                           <span className="font-medium text-foreground">{entry.item.name}</span>
                           <span className="text-muted-foreground block">{entry.item.start_time} – {entry.item.end_time}</span>
@@ -280,7 +288,8 @@ export function SchedulePage() {
         {[1, 2, 3, 4, 5, 6, 7].map((d) => (
           <Card
             key={d}
-            className={`min-w-[140px] min-h-0 flex flex-col gap-2 overflow-auto ${d >= 6 ? 'bg-muted/50' : ''}`}
+            className={`min-w-[140px] min-h-0 flex flex-col gap-2 overflow-auto animate-fade-in-up ${d >= 6 ? 'bg-muted/50' : ''}`}
+            style={{ animationDelay: `${(d - 1) * 35}ms` }}
           >
             <CardContent className="p-3 flex flex-col gap-2 flex-1 min-h-0">
               <div className="font-semibold text-foreground border-b border-border pb-2 shrink-0">
@@ -316,11 +325,12 @@ export function SchedulePage() {
                   />
                 )
               ) : null}
-              {(sortedDayItems[d] ?? []).map((entry) =>
+              {(sortedDayItems[d] ?? []).map((entry, i) =>
                 entry.type === 'chore' ? (
                   <div
                     key={`chore-${entry.item.id}`}
-                    className="text-sm p-2 rounded-lg bg-muted/30 border border-border"
+                    className="text-sm p-2 rounded-lg bg-muted/30 border border-border animate-fade-in-up transition-colors duration-150"
+                    style={{ animationDelay: `${i * 25}ms` }}
                   >
                     <span className="font-medium text-foreground">{entry.item.name}</span>
                     {(entry.item.scheduled_time || entry.item.time_of_day) && (
@@ -348,7 +358,8 @@ export function SchedulePage() {
                   return (
                     <div
                       key={`activity-${entry.item.id}`}
-                      className={`text-sm p-2 rounded-lg border ${cardBg} ${cardBorder}`}
+                      className={`text-sm p-2 rounded-lg border animate-fade-in-up transition-colors duration-150 ${cardBg} ${cardBorder}`}
+                      style={{ animationDelay: `${i * 25}ms` }}
                     >
                       <span className="font-medium text-foreground">{entry.item.name}</span>
                       <span className="text-muted-foreground block">{entry.item.start_time} – {entry.item.end_time}</span>

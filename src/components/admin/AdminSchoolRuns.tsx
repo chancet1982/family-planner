@@ -89,7 +89,7 @@ export function AdminSchoolRuns() {
   }
 
   return (
-    <section aria-labelledby="admin-school-heading">
+    <section aria-labelledby="admin-school-heading" className="animate-fade-in-up">
       <h2 id="admin-school-heading" className="text-lg font-medium text-foreground mb-4">
         School times
       </h2>
@@ -125,7 +125,7 @@ export function AdminSchoolRuns() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {SCHOOL_DAYS.map((d) => {
+            {SCHOOL_DAYS.map((d, index) => {
               const suggested = suggestedPickupForDay(activitiesByDay[d] ?? [])
               const currentPickup = dayTimes[d]?.pick_up_time ?? DEFAULT_PICKUP
               const suggestedMins = suggested ? parseTime(suggested) : null
@@ -134,7 +134,11 @@ export function AdminSchoolRuns() {
                 !suggestedMins ||
                 (currentMins != null && currentMins <= suggestedMins)
               return (
-                <TableRow key={d}>
+                <TableRow
+                  key={d}
+                  className="animate-fade-in-up"
+                  style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
+                >
                   <TableCell className="font-medium">{DAY_LABELS[d]}</TableCell>
                   <TableCell>
                     <Input
