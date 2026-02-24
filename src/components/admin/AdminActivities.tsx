@@ -284,7 +284,7 @@ export function AdminActivities() {
                 ))}
               </div>
               <Button type="button" variant="outline" size="sm" onClick={handleAddTime}>
-                + Add another time (e.g. Wed 17:00–18:00 and Sat 11:00–12:00)
+                + Add another occurance
               </Button>
             </div>
             {createActivityWithOccurrences.isError && (
@@ -444,7 +444,7 @@ export function AdminActivities() {
                           })}
                         </div>
                         <Button type="button" variant="outline" size="sm" onClick={() => handleAddOccurrence(act.id)}>
-                          + Add another time
+                          + Add another occurance
                         </Button>
                       </div>
                       {(updateActivity.isError || updateOccurrence.isError) && (
