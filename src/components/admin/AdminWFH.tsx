@@ -1,5 +1,14 @@
 import { usePeople } from '../../hooks/usePeople'
 import { useWFH, useWFHMutations } from '../../hooks/useWFH'
+import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 const DAYS = [1, 2, 3, 4, 5, 6, 7] as const
 const DAY_LABELS: Record<number, string> = {
@@ -27,16 +36,16 @@ export function AdminWFH() {
   if (isLoading) {
     return (
       <section aria-labelledby="admin-wfh-heading">
-        <h2 id="admin-wfh-heading" className="text-lg font-medium text-slate-800 mb-4">Work from home</h2>
-        <p className="text-slate-500">Loading…</p>
+        <h2 id="admin-wfh-heading" className="text-lg font-medium text-foreground mb-4">Work from home</h2>
+        <p className="text-muted-foreground">Loading…</p>
       </section>
     )
   }
   if (error) {
     return (
       <section aria-labelledby="admin-wfh-heading">
-        <h2 id="admin-wfh-heading" className="text-lg font-medium text-slate-800 mb-4">Work from home</h2>
-        <p className="text-red-600" role="alert">Failed to load work schedule.</p>
+        <h2 id="admin-wfh-heading" className="text-lg font-medium text-foreground mb-4">Work from home</h2>
+        <p className="text-destructive" role="alert">Failed to load work schedule.</p>
       </section>
     )
   }
@@ -44,58 +53,54 @@ export function AdminWFH() {
   if (parents.length === 0) {
     return (
       <section aria-labelledby="admin-wfh-heading">
-        <h2 id="admin-wfh-heading" className="text-lg font-medium text-slate-800 mb-4">Work from home</h2>
-        <p className="text-slate-600">Add at least one parent in the People section to set work-from-home days.</p>
+        <h2 id="admin-wfh-heading" className="text-lg font-medium text-foreground mb-4">Work from home</h2>
+        <p className="text-muted-foreground">Add at least one parent in the People section to set work-from-home days.</p>
       </section>
     )
   }
 
   return (
     <section aria-labelledby="admin-wfh-heading">
-      <h2 id="admin-wfh-heading" className="text-lg font-medium text-slate-800 mb-4">
+      <h2 id="admin-wfh-heading" className="text-lg font-medium text-foreground mb-4">
         Work from home
       </h2>
-      <p className="text-slate-600 mb-4">
+      <p className="text-muted-foreground mb-4">
         Tick the days each parent works from home. The app will use this to suggest who drops off and picks up the kids.
       </p>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse min-w-[400px]">
-          <thead>
-            <tr>
-              <th className="text-left p-2 border-b border-slate-200 font-medium text-slate-700">Parent</th>
-              {DAYS.map((d) => (
-                <th key={d} className="p-2 border-b border-slate-200 font-medium text-slate-700 text-center">
-                  {DAY_LABELS[d]}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {parents.map((person) => (
-              <tr key={person.id} className="border-b border-slate-100">
-                <td className="p-2 font-medium text-slate-900">{person.name}</td>
-                {DAYS.map((d) => (
-                  <td key={d} className="p-2 text-center">
-                    <button
-                      type="button"
-                      onClick={() => toggle(person.id, d)}
-                      className={`min-h-[44px] min-w-[44px] rounded-lg border-2 transition-colors ${
-                        isWFH(person.id, d)
-                          ? 'bg-slate-800 border-slate-800 text-white'
-                          : 'border-slate-200 text-slate-400 hover:border-slate-300'
-                      }`}
-                      aria-pressed={isWFH(person.id, d)}
-                      aria-label={`${person.name} ${DAY_LABELS[d]} WFH`}
-                    >
-                      ✓
-                    </button>
-                  </td>
-                ))}
-              </tr>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Parent</TableHead>
+            {DAYS.map((d) => (
+              <TableHead key={d} className="text-center">
+                {DAY_LABELS[d]}
+              </TableHead>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {parents.map((person) => (
+            <TableRow key={person.id}>
+              <TableCell className="font-medium">{person.name}</TableCell>
+              {DAYS.map((d) => (
+                <TableCell key={d} className="text-center">
+                  <Button
+                    type="button"
+                    variant={isWFH(person.id, d) ? 'default' : 'outline'}
+                    size="icon"
+                    className="min-w-[44px] min-h-[44px]"
+                    onClick={() => toggle(person.id, d)}
+                    aria-pressed={isWFH(person.id, d)}
+                    aria-label={`${person.name} ${DAY_LABELS[d]} WFH`}
+                  >
+                    ✓
+                  </Button>
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </section>
   )
 }

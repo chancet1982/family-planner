@@ -25,7 +25,12 @@ export function usePersonMutations() {
   const householdId = useHouseholdId()
 
   const create = useMutation({
-    mutationFn: async (input: { name: string; role: Person['role']; avatar_color?: Person['avatar_color'] }) => {
+    mutationFn: async (input: {
+      name: string
+      email: string
+      role: Person['role']
+      avatar_color?: Person['avatar_color']
+    }) => {
       const { data: max } = await supabase
         .from('people')
         .select('display_order')
@@ -39,9 +44,11 @@ export function usePersonMutations() {
         .insert({
           household_id: householdId!,
           name: input.name,
+          email: input.email.trim().toLowerCase(),
           role: input.role,
           display_order: nextOrder,
           avatar_color: input.avatar_color ?? 'blue',
+          user_id: null,
         })
         .select()
         .single()
@@ -55,9 +62,13 @@ export function usePersonMutations() {
 
   const update = useMutation({
     mutationFn: async ({ id, ...patch }: Partial<Person> & { id: string }) => {
+      const updatePayload = { ...patch }
+      if (typeof updatePayload.email === 'string') {
+        updatePayload.email = updatePayload.email.trim().toLowerCase() || null
+      }
       const { data, error } = await supabase
         .from('people')
-        .update(patch)
+        .update(updatePayload)
         .eq('id', id)
         .select()
         .single()

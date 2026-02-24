@@ -1,5 +1,7 @@
 import type { Person } from '../types'
 import { Avatar } from './Avatar'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { cn } from '@/lib/utils'
 
 interface PersonFilterProps {
   people: Person[]
@@ -10,50 +12,34 @@ interface PersonFilterProps {
 }
 
 export function PersonFilter({ people, selectedId, onChange, label = 'Show' }: PersonFilterProps) {
-  const isEveryone = selectedId === null || selectedId === ''
+  const value = selectedId === null || selectedId === '' ? 'everyone' : selectedId
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {label && (
-        <span className="text-sm font-medium text-slate-700">{label}</span>
+        <span className="text-sm font-medium text-foreground">{label}</span>
       )}
-      <div
-        className="inline-flex rounded-xl border border-slate-300 bg-slate-100 p-1 gap-0.5"
-        role="group"
-        aria-label="Filter by person"
+      <Tabs
+        value={value}
+        onValueChange={(v) => onChange(v === 'everyone' ? null : v)}
+        className="w-auto"
       >
-        <button
-          type="button"
-          onClick={() => onChange(null)}
-          className={`min-h-[40px] px-4 rounded-lg font-medium text-sm transition-colors ${
-            isEveryone
-              ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-          aria-pressed={isEveryone}
-        >
-          Everyone
-        </button>
-        {people.map((p) => {
-          const selected = selectedId === p.id
-          return (
-            <button
+        <TabsList role="group" aria-label="Filter by person" className="inline-flex rounded-lg p-1 h-auto flex-wrap gap-0.5">
+          <TabsTrigger value="everyone" className="min-h-[40px] px-4 data-[state=active]:bg-background">
+            Everyone
+          </TabsTrigger>
+          {people.map((p) => (
+            <TabsTrigger
               key={p.id}
-              type="button"
-              onClick={() => onChange(p.id)}
-              className={`min-h-[40px] px-4 rounded-lg font-medium text-sm transition-colors inline-flex items-center gap-2 ${
-                selected
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-              aria-pressed={selected}
+              value={p.id}
+              className={cn('min-h-[40px] px-4 inline-flex items-center gap-2 data-[state=active]:bg-background')}
             >
               <Avatar name={p.name} colorKey={p.avatar_color} size="sm" />
               {p.name}
-            </button>
-          )
-        })}
-      </div>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
     </div>
   )
 }

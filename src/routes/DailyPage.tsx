@@ -5,12 +5,18 @@ import { useActivities } from '../hooks/useActivities'
 import { usePeople } from '../hooks/usePeople'
 import { useAllChoreAssignments } from '../hooks/useChores'
 import { useAllocation } from '../hooks/useAllocation'
-import { useSchoolRunTimeForDay, useSchoolRunTimes, useSchoolRunTimesMutations } from '../hooks/useSchoolRunTimes'
+import { useSchoolRunTimes, useSchoolRunTimesMutations } from '../hooks/useSchoolRunTimes'
 import { useSchoolActivitySlots } from '../hooks/useSchoolActivitySlots'
 import { PersonFilter } from '../components/PersonFilter'
 import { Avatar } from '../components/Avatar'
 import { GrandparentsAlert } from '../components/GrandparentsAlert'
+import { WhoDoingWhatCard } from '../components/WhoDoingWhatCard'
 import { dayOfWeekToKey, DAY_LABELS } from '../lib/scheduleUtils'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { parseTime } from '../lib/schoolRunUtils'
 import { getActivityCardStyles } from '../lib/avatarColors'
 import type { Chore } from '../types'
@@ -37,7 +43,7 @@ function getTodayDayOfWeek(): number {
 export function DailyPage() {
   const [personFilterId, setPersonFilterId] = useState<string | null>(null)
   const [selectedDay, setSelectedDay] = useState(getTodayDayOfWeek)
-  const [schoolBlockOpen, setSchoolBlockOpen] = useState(false)
+  const [selectOpenDay, setSelectOpenDay] = useState<number | null>(null)
   const { data: people, isLoading: peopleLoading } = usePeople()
   const { data: chores, isLoading: choresLoading } = useChores()
   const { data: activitiesData, isLoading: activitiesLoading } = useActivities()
@@ -49,7 +55,6 @@ export function DailyPage() {
   const choreIds = (chores ?? []).map((c) => c.id)
   const { data: assignmentsMap = {} } = useAllChoreAssignments(choreIds)
   const allocation = useAllocation(selectedDay)
-  const schoolRunTime = useSchoolRunTimeForDay(selectedDay)
   const { data: timesMap } = useSchoolRunTimes()
   const { setDayAssignments } = useSchoolRunTimesMutations()
   const parents = useMemo(() => (people ?? []).filter((p) => p.role === 'parent'), [people])
@@ -81,11 +86,13 @@ export function DailyPage() {
 
   const loading = peopleLoading || choresLoading || activitiesLoading
 
+  const allocations = useMemo(() => ({ [selectedDay]: allocation }), [selectedDay, allocation])
+
   if (loading) {
     return (
       <div>
-        <h1 className="text-xl font-semibold text-slate-900 mb-4">Daily schedule</h1>
-        <p className="text-slate-500">Loading…</p>
+        <h1 className="text-xl font-semibold text-foreground mb-4">Daily schedule</h1>
+        <p className="text-muted-foreground">Loading…</p>
       </div>
     )
   }
@@ -93,25 +100,23 @@ export function DailyPage() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-        <h1 className="text-xl font-semibold text-slate-900">Daily schedule</h1>
+        <h1 className="text-xl font-semibold text-foreground">Daily schedule</h1>
         <div className="flex flex-wrap items-center gap-4">
-          <label className="text-sm font-medium text-slate-700">Day</label>
-          <select
-            value={selectedDay}
-            onChange={(e) => setSelectedDay(Number(e.target.value))}
-            className="min-h-[44px] px-4 rounded-xl border border-slate-300 bg-white text-slate-900"
-          >
-            {[1, 2, 3, 4, 5, 6, 7].map((d) => (
-              <option key={d} value={d}>{DAY_LABELS[d]}</option>
-            ))}
-          </select>
+          <Label>Day</Label>
+          <Select value={String(selectedDay)} onValueChange={(v) => setSelectedDay(Number(v))}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+                <SelectItem key={d} value={String(d)}>{DAY_LABELS[d]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <PersonFilter people={people ?? []} selectedId={personFilterId} onChange={setPersonFilterId} />
-          <Link
-            to="/schedule"
-            className="min-h-[44px] flex items-center px-4 rounded-xl bg-slate-200 text-slate-800 font-medium hover:bg-slate-300"
-          >
-            Weekly view
-          </Link>
+          <Button asChild variant="secondary">
+            <Link to="/schedule">Weekly view</Link>
+          </Button>
         </div>
       </div>
       <div className="max-w-2xl space-y-4">
@@ -119,234 +124,79 @@ export function DailyPage() {
           <>
             <GrandparentsAlert dayLabel={DAY_LABELS[selectedDay]} />
             {parents.length >= 1 && (
-              <div className="text-sm rounded-lg bg-white border border-slate-300 px-2 py-1.5 space-y-1.5 mt-2 shadow-sm">
-                {allocation.can_select_assignments && parents.length >= 2 ? (
-                  <>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-slate-800 font-medium">Who&apos;s doing what?</span>
-                      <button
-                        type="button"
-                        onClick={() => setSchoolBlockOpen((o) => !o)}
-                        className={`min-h-[36px] flex items-center justify-center rounded-lg border border-slate-400 bg-slate-100 text-slate-800 text-sm font-medium hover:bg-slate-200 [&_svg]:shrink-0 ${
-                          !schoolBlockOpen && timesMap?.[selectedDay]?.drop_off_assigned_person_id != null && timesMap?.[selectedDay]?.pick_up_assigned_person_id != null
-                            ? 'min-w-[36px] p-2'
-                            : 'py-2 px-3'
-                        }`}
-                        aria-label={schoolBlockOpen ? 'Close' : (timesMap?.[selectedDay]?.drop_off_assigned_person_id != null && timesMap?.[selectedDay]?.pick_up_assigned_person_id != null ? 'Edit assignments' : 'Select who does drop-off and pick-up')}
-                        title={schoolBlockOpen ? 'Close' : (timesMap?.[selectedDay]?.drop_off_assigned_person_id != null && timesMap?.[selectedDay]?.pick_up_assigned_person_id != null ? 'Edit' : 'Select')}
-                      >
-                        {schoolBlockOpen ? (
-                          'Close'
-                        ) : timesMap?.[selectedDay]?.drop_off_assigned_person_id != null && timesMap?.[selectedDay]?.pick_up_assigned_person_id != null ? (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        ) : (
-                          'Select'
-                        )}
-                      </button>
-                    </div>
-                    {(timesMap?.[selectedDay]?.drop_off_assigned_person_id != null || timesMap?.[selectedDay]?.pick_up_assigned_person_id != null) && !schoolBlockOpen && (
-                      <div className="text-slate-600 space-y-0.5">
-                        {timesMap?.[selectedDay]?.drop_off_assigned_person_id != null && (
-                          <div>Drop-off {schoolRunTime.drop_off_time}: {personName(timesMap[selectedDay].drop_off_assigned_person_id!)}</div>
-                        )}
-                        {timesMap?.[selectedDay]?.pick_up_assigned_person_id != null && (
-                          <div>Pick-up {schoolRunTime.pick_up_time}: {personName(timesMap[selectedDay].pick_up_assigned_person_id!)}</div>
-                        )}
-                      </div>
-                    )}
-                    {schoolBlockOpen && (
-                      <div className="space-y-1.5 pt-0.5">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs text-slate-600">Drop-off {schoolRunTime.drop_off_time}</span>
-                          <select
-                            value={timesMap?.[selectedDay]?.drop_off_assigned_person_id ?? allocation.drop_off_parent_id ?? ''}
-                            onChange={(e) => setDayAssignments.mutate({
-                              day_of_week: selectedDay,
-                              drop_off_assigned_person_id: e.target.value || null,
-                              pick_up_assigned_person_id: timesMap?.[selectedDay]?.pick_up_assigned_person_id ?? allocation.pick_up_parent_id ?? null,
-                            })}
-                            className="text-xs min-h-[32px] px-2 rounded border border-slate-300 bg-white w-full"
-                          >
-                            <option value="">—</option>
-                            {parents.map((p) => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs text-slate-600">Pick-up {schoolRunTime.pick_up_time}</span>
-                          <select
-                            value={timesMap?.[selectedDay]?.pick_up_assigned_person_id ?? allocation.pick_up_parent_id ?? ''}
-                            onChange={(e) => setDayAssignments.mutate({
-                              day_of_week: selectedDay,
-                              drop_off_assigned_person_id: timesMap?.[selectedDay]?.drop_off_assigned_person_id ?? allocation.drop_off_parent_id ?? null,
-                              pick_up_assigned_person_id: e.target.value || null,
-                            })}
-                            className="text-xs min-h-[32px] px-2 rounded border border-slate-300 bg-white w-full"
-                          >
-                            <option value="">—</option>
-                            {parents.map((p) => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-slate-600 space-y-0.5">
-                    {allocation.drop_off_parent_id != null && (
-                      <div>Drop-off {schoolRunTime.drop_off_time}: {personName(allocation.drop_off_parent_id)}</div>
-                    )}
-                    {allocation.pick_up_parent_id != null && (
-                      <div>Pick-up {schoolRunTime.pick_up_time}: {personName(allocation.pick_up_parent_id)}</div>
-                    )}
-                  </div>
-                )}
-              </div>
+              <WhoDoingWhatCard
+                day={selectedDay}
+                timesMap={timesMap}
+                allocations={allocations}
+                parents={parents}
+                personName={personName}
+                selectOpenDay={selectOpenDay}
+                setSelectOpenDay={setSelectOpenDay}
+                setDayAssignments={setDayAssignments.mutate}
+              />
             )}
           </>
         ) : allocation.drop_off_parent_id != null || allocation.pick_up_parent_id != null ? (
           parents.length >= 1 && (
-            <div className="text-sm rounded-lg bg-white border border-slate-300 px-2 py-1.5 space-y-1.5 mt-2 shadow-sm">
-              {allocation.can_select_assignments && parents.length >= 2 ? (
-                <>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-slate-800 font-medium">Who&apos;s doing what?</span>
-                    <button
-                      type="button"
-                      onClick={() => setSchoolBlockOpen((o) => !o)}
-                      className={`min-h-[36px] flex items-center justify-center rounded-lg border border-slate-400 bg-slate-100 text-slate-800 text-sm font-medium hover:bg-slate-200 [&_svg]:shrink-0 ${
-                        !schoolBlockOpen && timesMap?.[selectedDay]?.drop_off_assigned_person_id != null && timesMap?.[selectedDay]?.pick_up_assigned_person_id != null
-                          ? 'min-w-[36px] p-2'
-                          : 'py-2 px-3'
-                      }`}
-                      aria-label={schoolBlockOpen ? 'Close' : (timesMap?.[selectedDay]?.drop_off_assigned_person_id != null && timesMap?.[selectedDay]?.pick_up_assigned_person_id != null ? 'Edit assignments' : 'Select who does drop-off and pick-up')}
-                      title={schoolBlockOpen ? 'Close' : (timesMap?.[selectedDay]?.drop_off_assigned_person_id != null && timesMap?.[selectedDay]?.pick_up_assigned_person_id != null ? 'Edit' : 'Select')}
-                    >
-                      {schoolBlockOpen ? (
-                        'Close'
-                      ) : timesMap?.[selectedDay]?.drop_off_assigned_person_id != null && timesMap?.[selectedDay]?.pick_up_assigned_person_id != null ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      ) : (
-                        'Select'
-                      )}
-                    </button>
-                  </div>
-                  {(timesMap?.[selectedDay]?.drop_off_assigned_person_id != null || timesMap?.[selectedDay]?.pick_up_assigned_person_id != null) && !schoolBlockOpen && (
-                    <div className="text-slate-600 space-y-0.5">
-                      {timesMap?.[selectedDay]?.drop_off_assigned_person_id != null && (
-                        <div>Drop-off {schoolRunTime.drop_off_time}: {personName(timesMap[selectedDay].drop_off_assigned_person_id!)}</div>
-                      )}
-                      {timesMap?.[selectedDay]?.pick_up_assigned_person_id != null && (
-                        <div>Pick-up {schoolRunTime.pick_up_time}: {personName(timesMap[selectedDay].pick_up_assigned_person_id!)}</div>
-                      )}
-                    </div>
-                  )}
-                  {schoolBlockOpen && (
-                    <div className="space-y-1.5 pt-0.5">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs text-slate-600">Drop-off {schoolRunTime.drop_off_time}</span>
-                        <select
-                          value={timesMap?.[selectedDay]?.drop_off_assigned_person_id ?? allocation.drop_off_parent_id ?? ''}
-                          onChange={(e) => setDayAssignments.mutate({
-                            day_of_week: selectedDay,
-                            drop_off_assigned_person_id: e.target.value || null,
-                            pick_up_assigned_person_id: timesMap?.[selectedDay]?.pick_up_assigned_person_id ?? allocation.pick_up_parent_id ?? null,
-                          })}
-                          className="text-xs min-h-[32px] px-2 rounded border border-slate-300 bg-white w-full"
-                        >
-                          <option value="">—</option>
-                          {parents.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs text-slate-600">Pick-up {schoolRunTime.pick_up_time}</span>
-                        <select
-                          value={timesMap?.[selectedDay]?.pick_up_assigned_person_id ?? allocation.pick_up_parent_id ?? ''}
-                          onChange={(e) => setDayAssignments.mutate({
-                            day_of_week: selectedDay,
-                            drop_off_assigned_person_id: timesMap?.[selectedDay]?.drop_off_assigned_person_id ?? allocation.drop_off_parent_id ?? null,
-                            pick_up_assigned_person_id: e.target.value || null,
-                          })}
-                          className="text-xs min-h-[32px] px-2 rounded border border-slate-300 bg-white w-full"
-                        >
-                          <option value="">—</option>
-                          {parents.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="text-slate-600 space-y-0.5">
-                  {allocation.drop_off_parent_id != null && (
-                    <div>Drop-off {schoolRunTime.drop_off_time}: {personName(allocation.drop_off_parent_id)}</div>
-                  )}
-                  {allocation.pick_up_parent_id != null && (
-                    <div>Pick-up {schoolRunTime.pick_up_time}: {personName(allocation.pick_up_parent_id)}</div>
-                  )}
-                </div>
-              )}
-            </div>
+            <WhoDoingWhatCard
+              day={selectedDay}
+              timesMap={timesMap}
+              allocations={allocations}
+              parents={parents}
+              personName={personName}
+              selectOpenDay={selectOpenDay}
+              setSelectOpenDay={setSelectOpenDay}
+              setDayAssignments={setDayAssignments.mutate}
+            />
           )
         ) : null}
         <section>
-          <h2 className="text-lg font-medium text-slate-800 mb-2">Today</h2>
+          <h2 className="text-lg font-medium text-foreground mb-2">Today</h2>
           {sortedItems.length === 0 ? (
-            <p className="text-slate-500">Nothing scheduled today.</p>
+            <p className="text-muted-foreground">Nothing scheduled today.</p>
           ) : (
             <ul className="space-y-2">
               {sortedItems.map((entry) => {
                 if (entry.type === 'chore') {
                   const c = entry.item
                   return (
-                    <li
-                      key={`chore-${c.id}`}
-                      className="flex flex-wrap items-center justify-between gap-2 p-3 bg-white border border-slate-200 rounded-xl min-h-[48px]"
-                    >
-                      <span className="font-medium text-slate-900">{c.name}</span>
-                      <div className="flex items-center gap-2">
-                        {(c.scheduled_time || c.time_of_day) && (
-                          <span className="text-slate-500 text-sm">
-                            {c.scheduled_time ?? c.time_of_day}
-                          </span>
-                        )}
-                        {(assignmentsMap[c.id] ?? []).length > 0 && (
-                          <span className="flex flex-wrap gap-1.5 items-center">
-                            {(assignmentsMap[c.id] ?? []).map((pid) => {
-                              const p = (people ?? []).find((x) => x.id === pid)
-                              return (
-                                <span
-                                  key={pid}
-                                  className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-700"
-                                >
-                                  <Avatar name={p?.name ?? ''} colorKey={p?.avatar_color} size="sm" />
-                                  {personName(pid)}
-                                </span>
-                              )
-                            })}
-                          </span>
-                        )}
-                      </div>
-                    </li>
+                    <Card key={`chore-${c.id}`}>
+                      <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3 min-h-[48px]">
+                        <span className="font-medium text-foreground">{c.name}</span>
+                        <div className="flex items-center gap-2">
+                          {(c.scheduled_time || c.time_of_day) && (
+                            <span className="text-muted-foreground text-sm">
+                              {c.scheduled_time ?? c.time_of_day}
+                            </span>
+                          )}
+                          {(assignmentsMap[c.id] ?? []).length > 0 && (
+                            <span className="flex flex-wrap gap-1.5 items-center">
+                              {(assignmentsMap[c.id] ?? []).map((pid) => {
+                                const p = (people ?? []).find((x) => x.id === pid)
+                                return (
+                                  <Badge key={pid} variant="secondary" className="inline-flex items-center gap-1 text-xs">
+                                    <Avatar name={p?.name ?? ''} colorKey={p?.avatar_color} size="sm" />
+                                    {personName(pid)}
+                                  </Badge>
+                                )
+                              })}
+                            </span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
                   )
                 }
                 const a = entry.item
                 const person = (people ?? []).find((p) => p.id === a.person_id)
                 const { cardBg, cardBorder } = getActivityCardStyles(person?.avatar_color)
                 return (
-                  <li
-                    key={`activity-${a.id}`}
-                    className={`flex items-center justify-between p-3 border rounded-xl min-h-[48px] ${cardBg} ${cardBorder}`}
-                  >
-                    <span className="font-medium text-slate-900">{a.name}</span>
-                    <span className="text-slate-600">{a.start_time} – {a.end_time}</span>
-                  </li>
+                  <Card key={`activity-${a.id}`} className={`min-h-[48px] ${cardBg} ${cardBorder}`}>
+                    <CardContent className="flex items-center justify-between p-3">
+                      <span className="font-medium text-foreground">{a.name}</span>
+                      <span className="text-muted-foreground">{a.start_time} – {a.end_time}</span>
+                    </CardContent>
+                  </Card>
                 )
               })}
             </ul>

@@ -24,9 +24,11 @@ export interface Person {
   id: string
   household_id: string
   name: string
+  email: string | null
   role: PersonRole
   display_order: number
   avatar_color?: AvatarColorKey
+  user_id?: string | null
   created_at?: string
   updated_at?: string
 }

@@ -3,6 +3,18 @@ import { useSchoolRuns, useSchoolRunMutations } from '../../hooks/useSchoolRuns'
 import { useSchoolRunTimes, useSchoolRunTimesMutations, DAY_LABELS } from '../../hooks/useSchoolRunTimes'
 import { useActivities } from '../../hooks/useActivities'
 import { suggestedPickupForDay, parseTime } from '../../lib/schoolRunUtils'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 /** Weekdays only (no school on weekends). */
 const SCHOOL_DAYS = [1, 2, 3, 4, 5] as const
@@ -60,63 +72,59 @@ export function AdminSchoolRuns() {
   if (isLoading || timesLoading) {
     return (
       <section aria-labelledby="admin-school-heading">
-        <h2 id="admin-school-heading" className="text-lg font-medium text-slate-800 mb-4">School times</h2>
-        <p className="text-slate-500">Loading…</p>
+        <h2 id="admin-school-heading" className="text-lg font-medium text-foreground mb-4">School times</h2>
+        <p className="text-muted-foreground">Loading…</p>
       </section>
     )
   }
   if (error) {
     return (
       <section aria-labelledby="admin-school-heading">
-        <h2 id="admin-school-heading" className="text-lg font-medium text-slate-800 mb-4">School times</h2>
-        <p className="text-red-600" role="alert">Failed to load school times.</p>
+        <h2 id="admin-school-heading" className="text-lg font-medium text-foreground mb-4">School times</h2>
+        <Alert variant="destructive" role="alert">
+          <AlertDescription>Failed to load school times.</AlertDescription>
+        </Alert>
       </section>
     )
   }
 
   return (
     <section aria-labelledby="admin-school-heading">
-      <h2 id="admin-school-heading" className="text-lg font-medium text-slate-800 mb-4">
+      <h2 id="admin-school-heading" className="text-lg font-medium text-foreground mb-4">
         School times
       </h2>
-      <p className="text-slate-600 mb-4">
+      <p className="text-muted-foreground mb-4">
         Set drop-off and pick-up times per day. Pick-up should be 45 minutes before the first child activity.
       </p>
 
       <form onSubmit={handleSaveLabel} className="max-w-md space-y-2 mb-6">
-        <label htmlFor="school-label" className="block text-sm font-medium text-slate-700 mb-1">
-          Label
-        </label>
+        <Label htmlFor="school-label">Label</Label>
         <div className="flex gap-2">
-          <input
+          <Input
             id="school-label"
             type="text"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             placeholder="e.g. School"
-            className="flex-1 min-h-[48px] px-4 rounded-xl border border-slate-300"
+            className="flex-1"
           />
-          <button
-            type="submit"
-            disabled={upsertLabel.isPending}
-            className="min-h-[48px] px-4 rounded-xl bg-slate-800 text-white font-medium hover:bg-slate-700 disabled:opacity-50"
-          >
+          <Button type="submit" disabled={upsertLabel.isPending}>
             {upsertLabel.isPending ? 'Saving…' : 'Save label'}
-          </button>
+          </Button>
         </div>
       </form>
 
       <form onSubmit={handleSaveTimes} className="overflow-x-auto">
-        <table className="w-full border-collapse min-w-[400px]">
-          <thead>
-            <tr>
-              <th className="text-left p-2 border-b border-slate-200 font-medium text-slate-700">Day</th>
-              <th className="text-left p-2 border-b border-slate-200 font-medium text-slate-700">Drop-off</th>
-              <th className="text-left p-2 border-b border-slate-200 font-medium text-slate-700">Pick-up</th>
-              <th className="text-left p-2 border-b border-slate-200 font-medium text-slate-700 text-sm">Hint</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Day</TableHead>
+              <TableHead>Drop-off</TableHead>
+              <TableHead>Pick-up</TableHead>
+              <TableHead className="text-sm">Hint</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {SCHOOL_DAYS.map((d) => {
               const suggested = suggestedPickupForDay(activitiesByDay[d] ?? [])
               const currentPickup = dayTimes[d]?.pick_up_time ?? DEFAULT_PICKUP
@@ -126,10 +134,10 @@ export function AdminSchoolRuns() {
                 !suggestedMins ||
                 (currentMins != null && currentMins <= suggestedMins)
               return (
-                <tr key={d} className="border-b border-slate-100">
-                  <td className="p-2 font-medium text-slate-900">{DAY_LABELS[d]}</td>
-                  <td className="p-2">
-                    <input
+                <TableRow key={d}>
+                  <TableCell className="font-medium">{DAY_LABELS[d]}</TableCell>
+                  <TableCell>
+                    <Input
                       type="time"
                       value={dayTimes[d]?.drop_off_time ?? DEFAULT_DROP}
                       onChange={(e) =>
@@ -138,11 +146,11 @@ export function AdminSchoolRuns() {
                           [d]: { ...prev[d], drop_off_time: e.target.value, pick_up_time: prev[d]?.pick_up_time ?? DEFAULT_PICKUP },
                         }))
                       }
-                      className="min-h-[44px] px-3 rounded-lg border border-slate-300 w-full max-w-[120px]"
+                      className="w-full max-w-[120px]"
                     />
-                  </td>
-                  <td className="p-2">
-                    <input
+                  </TableCell>
+                  <TableCell>
+                    <Input
                       type="time"
                       value={dayTimes[d]?.pick_up_time ?? DEFAULT_PICKUP}
                       onChange={(e) =>
@@ -151,38 +159,32 @@ export function AdminSchoolRuns() {
                           [d]: { drop_off_time: prev[d]?.drop_off_time ?? DEFAULT_DROP, pick_up_time: e.target.value },
                         }))
                       }
-                      className={`min-h-[44px] px-3 rounded-lg border w-full max-w-[120px] ${
-                        pickupOk ? 'border-slate-300' : 'border-amber-400 bg-amber-50'
-                      }`}
+                      className={`w-full max-w-[120px] ${!pickupOk ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30' : ''}`}
                       title={suggested ? `Pick-up 45 min before first activity (by ${suggested})` : undefined}
                     />
-                  </td>
-                  <td className="p-2 text-sm text-slate-500">
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
                     {suggested ? (
-                      <span className={pickupOk ? '' : 'text-amber-600'}>
+                      <span className={pickupOk ? '' : 'text-amber-600 dark:text-amber-400'}>
                         First activity → pick-up by {suggested}
                       </span>
                     ) : (
-                      <span className="text-slate-400">No activities</span>
+                      <span className="text-muted-foreground/70">No activities</span>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         {upsertAllDays.isError && (
-          <p className="text-sm text-red-600 mt-2" role="alert">
-            {(upsertAllDays.error as Error).message}
-          </p>
+          <Alert variant="destructive" className="mt-2" role="alert">
+            <AlertDescription>{(upsertAllDays.error as Error).message}</AlertDescription>
+          </Alert>
         )}
-        <button
-          type="submit"
-          disabled={upsertAllDays.isPending}
-          className="mt-4 min-h-[48px] px-6 rounded-xl bg-slate-800 text-white font-medium hover:bg-slate-700 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={upsertAllDays.isPending} className="mt-4">
           {upsertAllDays.isPending ? 'Saving…' : 'Save times'}
-        </button>
+        </Button>
       </form>
     </section>
   )
