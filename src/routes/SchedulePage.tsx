@@ -7,6 +7,7 @@ import { useAllChoreAssignments } from '../hooks/useChores'
 import { useAllocationsForWeek } from '../hooks/useAllocation'
 import { useSchoolRunTimes, useSchoolRunTimesMutations } from '../hooks/useSchoolRunTimes'
 import { useSchoolActivitySlots } from '../hooks/useSchoolActivitySlots'
+import { useGymnastics } from '../hooks/useGymnastics'
 import { PersonFilter } from '../components/PersonFilter'
 import { Avatar } from '../components/Avatar'
 import { GrandparentsAlert } from '../components/GrandparentsAlert'
@@ -75,18 +76,68 @@ export function SchedulePage() {
   const { data: timesMap } = useSchoolRunTimes()
   const { setDayAssignments } = useSchoolRunTimesMutations()
   const parents = useMemo(() => (people ?? []).filter((p) => p.role === 'parent'), [people])
+  const children = useMemo(() => (people ?? []).filter((p) => p.role === 'child'), [people])
+  const { data: gymnasticsList } = useGymnastics()
+
+  const gymnasticsByDay = useMemo(() => {
+    const map: Record<number, string[]> = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] }
+    ;(gymnasticsList ?? []).forEach((g) => {
+      if (g.day_of_week >= 1 && g.day_of_week <= 5) {
+        map[g.day_of_week].push(g.person_id)
+      }
+    })
+    return map
+  }, [gymnasticsList])
 
   const choresByDay = useMemo(() => {
-    const map: Record<number, typeof chores> = {}
+    const map: Record<number, Chore[]> = {}
+
     for (let d = 1; d <= 7; d++) {
       const key = dayOfWeekToKey(d)
-      map[d] = (chores ?? []).filter((c) => c.repeat_pattern[key]).filter((c) => {
+
+      const base = (chores ?? []).filter((c) => c.repeat_pattern[key])
+
+      const baseFiltered = base.filter((c) => {
         if (!personFilterId) return true
         return (assignmentsMap[c.id] ?? []).includes(personFilterId)
       })
+
+      const gymChores: Chore[] = []
+      if (d >= 1 && d <= 5) {
+        const childIdsForDay = gymnasticsByDay[d] ?? []
+        for (const child of children) {
+          if (!childIdsForDay.includes(child.id)) continue
+          if (personFilterId && personFilterId !== child.id) continue
+
+          const baseChoreFields = {
+            household_id: '',
+            repeat_pattern: {},
+            time_of_day: null as string | null,
+            created_at: undefined,
+            updated_at: undefined,
+          }
+
+          gymChores.push({
+            id: `gym-pack-${child.id}-${d}`,
+            name: 'Pack gymnastics bag',
+            scheduled_time: '07:30',
+            ...baseChoreFields,
+          } as Chore)
+
+          gymChores.push({
+            id: `gym-empty-${child.id}-${d}`,
+            name: 'Empty gymnastics bag',
+            scheduled_time: '19:30',
+            ...baseChoreFields,
+          } as Chore)
+        }
+      }
+
+      map[d] = [...baseFiltered, ...gymChores]
     }
+
     return map
-  }, [chores, assignmentsMap, personFilterId])
+  }, [chores, assignmentsMap, personFilterId, gymnasticsByDay, children])
 
   const activitiesByDay = useMemo(() => {
     const map: Record<number, typeof activities> = {}
@@ -273,7 +324,12 @@ export function SchedulePage() {
                       >
                         <CardContent className="p-2">
                           <span className="font-medium text-foreground">{entry.item.name}</span>
-                          <span className="text-muted-foreground block">{entry.item.start_time} – {entry.item.end_time}</span>
+                          <span className="text-muted-foreground block">
+                            {entry.item.start_time} – {entry.item.end_time}
+                          </span>
+                          <span className="text-xs text-muted-foreground block">
+                            {person?.name ?? personName(entry.item.person_id)}
+                          </span>
                         </CardContent>
                       </Card>
                     )
@@ -284,21 +340,36 @@ export function SchedulePage() {
           </CardContent>
         </Card>
       ) : (
-      <div className="flex-1 min-h-0 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 overflow-x-auto grid-auto-rows-[1fr]">
-        {[1, 2, 3, 4, 5, 6, 7].map((d) => (
-          <Card
-            key={d}
-            className={`min-w-[140px] min-h-0 flex flex-col gap-2 overflow-auto animate-fade-in-up ${d >= 6 ? 'bg-muted/50' : ''}`}
-            style={{ animationDelay: `${(d - 1) * 35}ms` }}
-          >
-            <CardContent className="p-3 flex flex-col gap-2 flex-1 min-h-0">
-              <div className="font-semibold text-foreground border-b border-border pb-2 shrink-0">
-                {DAY_LABELS[d]}
-              </div>
-              {allocations[d]?.needs_grandparents_alert ? (
-                <>
-                  <GrandparentsAlert dayLabel={DAY_LABELS[d]} />
-                  {parents.length >= 1 && (
+      <div className="flex-1 min-h-0 overflow-x-auto pb-1">
+        <div className="grid grid-cols-7 gap-3 min-w-[1400px]">
+          {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+            <Card
+              key={d}
+              className={`min-h-0 flex flex-col gap-2 overflow-auto animate-fade-in-up ${d >= 6 ? 'bg-muted/50' : ''}`}
+              style={{ animationDelay: `${(d - 1) * 35}ms` }}
+            >
+              <CardContent className="p-3 flex flex-col gap-2 flex-1 min-h-0">
+                <div className="font-semibold text-foreground border-b border-border pb-2 shrink-0">
+                  {DAY_LABELS[d]}
+                </div>
+                {allocations[d]?.needs_grandparents_alert ? (
+                  <>
+                    <GrandparentsAlert dayLabel={DAY_LABELS[d]} />
+                    {parents.length >= 1 && (
+                      <WhoDoingWhatCard
+                        day={d}
+                        timesMap={timesMap}
+                        allocations={allocations}
+                        parents={parents}
+                        personName={personName}
+                        selectOpenDay={selectOpenDay}
+                        setSelectOpenDay={setSelectOpenDay}
+                        setDayAssignments={setDayAssignments.mutate}
+                      />
+                    )}
+                  </>
+                ) : allocations[d]?.drop_off_parent_id != null || allocations[d]?.pick_up_parent_id != null ? (
+                  parents.length >= 1 && (
                     <WhoDoingWhatCard
                       day={d}
                       timesMap={timesMap}
@@ -309,70 +380,62 @@ export function SchedulePage() {
                       setSelectOpenDay={setSelectOpenDay}
                       setDayAssignments={setDayAssignments.mutate}
                     />
-                  )}
-                </>
-              ) : allocations[d]?.drop_off_parent_id != null || allocations[d]?.pick_up_parent_id != null ? (
-                parents.length >= 1 && (
-                  <WhoDoingWhatCard
-                    day={d}
-                    timesMap={timesMap}
-                    allocations={allocations}
-                    parents={parents}
-                    personName={personName}
-                    selectOpenDay={selectOpenDay}
-                    setSelectOpenDay={setSelectOpenDay}
-                    setDayAssignments={setDayAssignments.mutate}
-                  />
-                )
-              ) : null}
-              {(sortedDayItems[d] ?? []).map((entry, i) =>
-                entry.type === 'chore' ? (
-                  <div
-                    key={`chore-${entry.item.id}`}
-                    className="text-sm p-2 rounded-lg bg-muted/30 border border-border animate-fade-in-up transition-colors duration-150"
-                    style={{ animationDelay: `${i * 25}ms` }}
-                  >
-                    <span className="font-medium text-foreground">{entry.item.name}</span>
-                    {(entry.item.scheduled_time || entry.item.time_of_day) && (
-                      <span className="text-muted-foreground ml-1">
-                        {entry.item.scheduled_time ? entry.item.scheduled_time : `(${entry.item.time_of_day})`}
-                      </span>
-                    )}
-                    {(assignmentsMap[entry.item.id] ?? []).length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
-                        {(assignmentsMap[entry.item.id] ?? []).map((pid) => {
-                          const p = (people ?? []).find((x) => x.id === pid)
-                          return (
-                            <Badge key={pid} variant="secondary" className="inline-flex items-center gap-1 text-xs">
-                              <Avatar name={p?.name ?? ''} colorKey={p?.avatar_color} size="sm" />
-                              {personName(pid)}
-                            </Badge>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ) : (() => {
-                  const person = (people ?? []).find((p) => p.id === entry.item.person_id)
-                  const { cardBg, cardBorder } = getActivityCardStyles(person?.avatar_color)
-                  return (
+                  )
+                ) : null}
+                {(sortedDayItems[d] ?? []).map((entry, i) =>
+                  entry.type === 'chore' ? (
                     <div
-                      key={`activity-${entry.item.id}`}
-                      className={`text-sm p-2 rounded-lg border animate-fade-in-up transition-colors duration-150 ${cardBg} ${cardBorder}`}
+                      key={`chore-${entry.item.id}`}
+                      className="text-sm p-2 rounded-lg bg-muted/30 border border-border animate-fade-in-up transition-colors duration-150"
                       style={{ animationDelay: `${i * 25}ms` }}
                     >
                       <span className="font-medium text-foreground">{entry.item.name}</span>
-                      <span className="text-muted-foreground block">{entry.item.start_time} – {entry.item.end_time}</span>
+                      {(entry.item.scheduled_time || entry.item.time_of_day) && (
+                        <span className="text-muted-foreground ml-1">
+                          {entry.item.scheduled_time ? entry.item.scheduled_time : `(${entry.item.time_of_day})`}
+                        </span>
+                      )}
+                      {(assignmentsMap[entry.item.id] ?? []).length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+                          {(assignmentsMap[entry.item.id] ?? []).map((pid) => {
+                            const p = (people ?? []).find((x) => x.id === pid)
+                            return (
+                              <Badge key={pid} variant="secondary" className="inline-flex items-center gap-1 text-xs">
+                                <Avatar name={p?.name ?? ''} colorKey={p?.avatar_color} size="sm" />
+                                {personName(pid)}
+                              </Badge>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )
-                })()
-              )}
-              {(sortedDayItems[d] ?? []).length === 0 && !allocations[d]?.needs_grandparents_alert && (
-                <p className="text-sm text-muted-foreground">Nothing scheduled</p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                  ) : (() => {
+                    const person = (people ?? []).find((p) => p.id === entry.item.person_id)
+                    const { cardBg, cardBorder } = getActivityCardStyles(person?.avatar_color)
+                    return (
+                      <div
+                        key={`activity-${entry.item.id}`}
+                        className={`text-sm p-2 rounded-lg border animate-fade-in-up transition-colors duration-150 ${cardBg} ${cardBorder}`}
+                        style={{ animationDelay: `${i * 25}ms` }}
+                      >
+                        <span className="font-medium text-foreground">{entry.item.name}</span>
+                        <span className="text-muted-foreground block">
+                          {entry.item.start_time} – {entry.item.end_time}
+                        </span>
+                        <span className="text-xs text-muted-foreground block">
+                          {person?.name ?? personName(entry.item.person_id)}
+                        </span>
+                      </div>
+                    )
+                  })()
+                )}
+                {(sortedDayItems[d] ?? []).length === 0 && !allocations[d]?.needs_grandparents_alert && (
+                  <p className="text-sm text-muted-foreground">Nothing scheduled</p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
       )}
     </div>

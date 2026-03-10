@@ -59,7 +59,15 @@ export function useActivityMutations() {
     mutationFn: async (input: {
       name: string
       person_id: string
-      occurrences: Array<{ day_of_week: number; start_time: string; end_time: string }>
+      occurrences: Array<{
+        day_of_week: number
+        start_time: string
+        end_time: string
+        drop_off_mode?: 'parent' | 'grandparents' | 'alone'
+        pick_up_mode?: 'parent' | 'grandparents' | 'alone'
+        drop_off_parent_id?: string | null
+        pick_up_parent_id?: string | null
+      }>
     }) => {
       const { data: act, error: actError } = await supabase
         .from('activities')
@@ -77,6 +85,10 @@ export function useActivityMutations() {
         day_of_week: o.day_of_week,
         start_time: o.start_time,
         end_time: o.end_time,
+        drop_off_mode: o.drop_off_mode ?? 'parent',
+        pick_up_mode: o.pick_up_mode ?? 'parent',
+        drop_off_parent_id: o.drop_off_parent_id ?? null,
+        pick_up_parent_id: o.pick_up_parent_id ?? null,
       }))
       const { data: occData, error: occError } = await supabase
         .from('activity_occurrences')
@@ -96,10 +108,23 @@ export function useActivityMutations() {
       day_of_week: number
       start_time: string
       end_time: string
+      drop_off_mode?: 'parent' | 'grandparents' | 'alone'
+      pick_up_mode?: 'parent' | 'grandparents' | 'alone'
+      drop_off_parent_id?: string | null
+      pick_up_parent_id?: string | null
     }) => {
       const { data, error } = await supabase
         .from('activity_occurrences')
-        .insert(input)
+        .insert({
+          activity_id: input.activity_id,
+          day_of_week: input.day_of_week,
+          start_time: input.start_time,
+          end_time: input.end_time,
+          drop_off_mode: input.drop_off_mode ?? 'parent',
+          pick_up_mode: input.pick_up_mode ?? 'parent',
+          drop_off_parent_id: input.drop_off_parent_id ?? null,
+          pick_up_parent_id: input.pick_up_parent_id ?? null,
+        })
         .select()
         .single()
       if (error) throw error
@@ -116,6 +141,10 @@ export function useActivityMutations() {
       day_of_week?: number
       start_time?: string
       end_time?: string
+      drop_off_mode?: 'parent' | 'grandparents' | 'alone'
+      pick_up_mode?: 'parent' | 'grandparents' | 'alone'
+      drop_off_parent_id?: string | null
+      pick_up_parent_id?: string | null
     }) => {
       const { id, ...patch } = input
       const { data, error } = await supabase

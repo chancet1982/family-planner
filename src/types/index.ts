@@ -67,6 +67,10 @@ export interface ActivityOccurrence {
   day_of_week: number // 1-7
   start_time: string // HH:mm
   end_time: string
+  drop_off_mode?: 'parent' | 'grandparents' | 'alone'
+  pick_up_mode?: 'parent' | 'grandparents' | 'alone'
+  drop_off_parent_id?: string | null
+  pick_up_parent_id?: string | null
   created_at?: string
   updated_at?: string
 }
@@ -88,6 +92,14 @@ export interface WorkFromHome {
   day_of_week: number // 1-7
   start_time: string | null
   end_time: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface GymnasticsSchedule {
+  id: string
+  person_id: string
+  day_of_week: number // 1-5 (Mon–Fri)
   created_at?: string
   updated_at?: string
 }

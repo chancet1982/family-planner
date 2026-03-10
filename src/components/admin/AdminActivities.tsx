@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { Switch } from '@/components/ui/switch'
 
 const DAY_OPTIONS = [
   { value: 1, label: 'Monday' },
@@ -50,12 +51,36 @@ export function AdminActivities() {
   const [showForm, setShowForm] = useState(false)
   const [formName, setFormName] = useState('')
   const [formPersonId, setFormPersonId] = useState('')
-  const [formOccurrences, setFormOccurrences] = useState<Array<{ day_of_week: number; start_time: string; end_time: string }>>([
-    { day_of_week: 3, start_time: '17:00', end_time: '18:00' },
+  const [formOccurrences, setFormOccurrences] = useState<
+    Array<{
+      day_of_week: number
+      start_time: string
+      end_time: string
+      drop_off_mode?: 'parent' | 'grandparents' | 'alone'
+      pick_up_mode?: 'parent' | 'grandparents' | 'alone'
+      drop_off_parent_id?: string | null
+      pick_up_parent_id?: string | null
+    }>
+  >([
+    { day_of_week: 3, start_time: '17:00', end_time: '18:00', drop_off_mode: 'parent', pick_up_mode: 'parent' },
   ])
   const [editName, setEditName] = useState('')
   const [editPersonId, setEditPersonId] = useState('')
-  const [editOccurrences, setEditOccurrences] = useState<Record<string, { day_of_week: number; start_time: string; end_time: string }>>({})
+  const [editOccurrences, setEditOccurrences] = useState<
+    Record<
+      string,
+      {
+        day_of_week: number
+        start_time: string
+        end_time: string
+        drop_off_mode?: 'parent' | 'grandparents' | 'alone'
+        pick_up_mode?: 'parent' | 'grandparents' | 'alone'
+        drop_off_parent_id?: string | null
+        pick_up_parent_id?: string | null
+        separate_pick_up?: boolean
+      }
+    >
+  >({})
 
   const occurrencesByActivityId = new Map<string, ActivityOccurrence[]>()
   for (const occ of occurrences) {
@@ -90,7 +115,10 @@ export function AdminActivities() {
   const dayLabel = (d: number) => DAY_OPTIONS.find((o) => o.value === d)?.label ?? ''
 
   const handleAddTime = () => {
-    setFormOccurrences((prev) => [...prev, { day_of_week: 1, start_time: '09:00', end_time: '10:00' }])
+    setFormOccurrences((prev) => [
+      ...prev,
+      { day_of_week: 1, start_time: '09:00', end_time: '10:00', drop_off_mode: 'parent', pick_up_mode: 'parent' },
+    ])
   }
 
   const handleRemoveFormTime = (index: number) => {
@@ -110,7 +138,7 @@ export function AdminActivities() {
         onSuccess: () => {
           setFormName('')
           setFormPersonId('')
-          setFormOccurrences([{ day_of_week: 3, start_time: '17:00', end_time: '18:00' }])
+          setFormOccurrences([...defaultFormOccurrences])
           setShowForm(false)
         },
       }
@@ -126,9 +154,17 @@ export function AdminActivities() {
     setEditName(act.name)
     setEditPersonId(act.person_id)
     const occs = occurrencesByActivityId.get(act.id) ?? []
-    const next: Record<string, { day_of_week: number; start_time: string; end_time: string }> = {}
+    const next: typeof editOccurrences = {}
     for (const o of occs) {
-      next[o.id] = { day_of_week: o.day_of_week, start_time: o.start_time, end_time: o.end_time }
+      next[o.id] = {
+        day_of_week: o.day_of_week,
+        start_time: o.start_time,
+        end_time: o.end_time,
+        drop_off_mode: o.drop_off_mode ?? 'parent',
+        pick_up_mode: o.pick_up_mode ?? 'parent',
+        drop_off_parent_id: o.drop_off_parent_id ?? null,
+        pick_up_parent_id: o.pick_up_parent_id ?? null,
+      }
     }
     setEditOccurrences(next)
   }
@@ -141,10 +177,21 @@ export function AdminActivities() {
   const handleSaveOccurrence = (occ: ActivityOccurrence) => {
     const state = editOccurrences[occ.id]
     if (!state) return
-    updateOccurrence.mutate(
-      { id: occ.id, day_of_week: state.day_of_week, start_time: state.start_time, end_time: state.end_time },
-      { onSuccess: () => {} }
-    )
+    const separate = state.separate_pick_up ?? false
+    const dropOffMode = state.drop_off_mode ?? 'parent'
+    const pickUpMode = separate ? state.pick_up_mode ?? 'parent' : dropOffMode
+    const dropOffParentId = state.drop_off_parent_id ?? null
+    const pickUpParentId = separate ? state.pick_up_parent_id ?? null : dropOffParentId
+    updateOccurrence.mutate({
+      id: occ.id,
+      day_of_week: state.day_of_week,
+      start_time: state.start_time,
+      end_time: state.end_time,
+      drop_off_mode: dropOffMode,
+      pick_up_mode: pickUpMode,
+      drop_off_parent_id: dropOffParentId,
+      pick_up_parent_id: pickUpParentId,
+    })
   }
 
   const handleAddOccurrence = (activityId: string) => {
@@ -159,7 +206,15 @@ export function AdminActivities() {
         onSuccess: (newOcc) => {
           setEditOccurrences((prev) => ({
             ...prev,
-            [newOcc.id]: { day_of_week: newOcc.day_of_week, start_time: newOcc.start_time, end_time: newOcc.end_time },
+            [newOcc.id]: {
+              day_of_week: newOcc.day_of_week,
+              start_time: newOcc.start_time,
+              end_time: newOcc.end_time,
+              drop_off_mode: newOcc.drop_off_mode ?? 'parent',
+              pick_up_mode: newOcc.pick_up_mode ?? 'parent',
+              drop_off_parent_id: newOcc.drop_off_parent_id ?? null,
+              pick_up_parent_id: newOcc.pick_up_parent_id ?? null,
+            },
           }))
         },
       }
@@ -171,7 +226,17 @@ export function AdminActivities() {
     return occs.map((o) => `${dayLabel(o.day_of_week)} ${o.start_time}–${o.end_time}`).join(', ') || 'No times'
   }
 
-  const defaultFormOccurrences = [{ day_of_week: 3, start_time: '17:00', end_time: '18:00' }]
+  const defaultFormOccurrences: Array<{
+    day_of_week: number
+    start_time: string
+    end_time: string
+    drop_off_mode?: 'parent' | 'grandparents' | 'alone'
+    pick_up_mode?: 'parent' | 'grandparents' | 'alone'
+    drop_off_parent_id?: string | null
+    pick_up_parent_id?: string | null
+  }> = [
+    { day_of_week: 3, start_time: '17:00', end_time: '18:00', drop_off_mode: 'parent', pick_up_mode: 'parent' },
+  ]
 
   return (
     <section aria-labelledby="admin-activities-heading">
@@ -293,13 +358,15 @@ export function AdminActivities() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setShowForm(false)
-                  setFormName('')
-                  setFormPersonId('')
-                  setFormOccurrences([...defaultFormOccurrences])
-                  createActivityWithOccurrences.reset()
-                }}
+                  onClick={() => {
+                    setShowForm(false)
+                    setFormName('')
+                    setFormPersonId('')
+                    setFormOccurrences([
+                      { day_of_week: 3, start_time: '17:00', end_time: '18:00', drop_off_mode: 'parent', pick_up_mode: 'parent' },
+                    ])
+                    createActivityWithOccurrences.reset()
+                  }}
               >
                 Cancel
               </Button>
@@ -392,66 +459,281 @@ export function AdminActivities() {
                         <Label>Times (day + start – end)</Label>
                         <div className="space-y-2">
                           {occs.map((occ) => {
-                            const state = editOccurrences[occ.id] ?? { day_of_week: occ.day_of_week, start_time: occ.start_time, end_time: occ.end_time }
+                            const activityPerson = (people ?? []).find((p) => p.id === act.person_id)
+                            const isChildActivity = activityPerson?.role === 'child'
+                            const state = editOccurrences[occ.id] ?? {
+                              day_of_week: occ.day_of_week,
+                              start_time: occ.start_time,
+                              end_time: occ.end_time,
+                              drop_off_mode: occ.drop_off_mode ?? 'parent',
+                              pick_up_mode: occ.pick_up_mode ?? 'parent',
+                              drop_off_parent_id: occ.drop_off_parent_id ?? null,
+                              pick_up_parent_id: occ.pick_up_parent_id ?? null,
+                              separate_pick_up:
+                                (occ.drop_off_mode ?? 'parent') !== (occ.pick_up_mode ?? 'parent') ||
+                                occ.drop_off_parent_id !== occ.pick_up_parent_id,
+                            }
+                            const parents = (people ?? []).filter((p) => p.role === 'parent')
+                            const separate =
+                              state.separate_pick_up ??
+                              ((state.drop_off_mode ?? 'parent') !== (state.pick_up_mode ?? 'parent') ||
+                                state.drop_off_parent_id !== state.pick_up_parent_id)
                             return (
-                              <div key={occ.id} className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-muted/50">
-                                <Select
-                                  value={String(state.day_of_week)}
-                                  onValueChange={(v) =>
-                                    setEditOccurrences((prev) => ({
-                                      ...prev,
-                                      [occ.id]: { ...state, day_of_week: Number(v) },
-                                    }))
-                                  }
-                                  onOpenChange={(open) => {
-                                    if (!open) handleSaveOccurrence(occ)
-                                  }}
-                                >
-                                  <SelectTrigger className="w-[140px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {DAY_OPTIONS.map((o) => (
-                                      <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <Input
-                                  type="time"
-                                  value={state.start_time}
-                                  onChange={(e) =>
-                                    setEditOccurrences((prev) => ({
-                                      ...prev,
-                                      [occ.id]: { ...state, start_time: e.target.value },
-                                    }))
-                                  }
-                                  onBlur={() => handleSaveOccurrence(occ)}
-                                  className="w-[100px]"
-                                />
-                                <span className="text-muted-foreground">–</span>
-                                <Input
-                                  type="time"
-                                  value={state.end_time}
-                                  onChange={(e) =>
-                                    setEditOccurrences((prev) => ({
-                                      ...prev,
-                                      [occ.id]: { ...state, end_time: e.target.value },
-                                    }))
-                                  }
-                                  onBlur={() => handleSaveOccurrence(occ)}
-                                  className="w-[100px]"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="border-destructive/50 text-destructive hover:bg-destructive/10"
-                                  onClick={() => {
-                                    if (window.confirm('Remove this time slot?')) removeOccurrence.mutate(occ.id)
-                                  }}
-                                >
-                                  Remove
-                                </Button>
+                              <div key={occ.id} className="space-y-2 p-2 rounded-lg bg-muted border border-border/60">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Select
+                                    value={String(state.day_of_week)}
+                                    onValueChange={(v) =>
+                                      setEditOccurrences((prev) => ({
+                                        ...prev,
+                                        [occ.id]: { ...state, day_of_week: Number(v) },
+                                      }))
+                                    }
+                                    onOpenChange={(open) => {
+                                      if (!open) handleSaveOccurrence(occ)
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-[140px] bg-background">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {DAY_OPTIONS.map((o) => (
+                                        <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Input
+                                    type="time"
+                                    value={state.start_time}
+                                    onChange={(e) =>
+                                      setEditOccurrences((prev) => ({
+                                        ...prev,
+                                        [occ.id]: { ...state, start_time: e.target.value },
+                                      }))
+                                    }
+                                    onBlur={() => handleSaveOccurrence(occ)}
+                                    className="w-[100px] bg-background"
+                                  />
+                                  <span className="text-muted-foreground">–</span>
+                                  <Input
+                                    type="time"
+                                    value={state.end_time}
+                                    onChange={(e) =>
+                                      setEditOccurrences((prev) => ({
+                                        ...prev,
+                                        [occ.id]: { ...state, end_time: e.target.value },
+                                      }))
+                                    }
+                                    onBlur={() => handleSaveOccurrence(occ)}
+                                    className="w-[100px] bg-background"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                                    onClick={() => {
+                                      if (window.confirm('Remove this time slot?')) removeOccurrence.mutate(occ.id)
+                                    }}
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                                {isChildActivity && (
+                                  <div className="space-y-2">
+                                    {!separate ? (
+                                      <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground">Drop-off &amp; pick-up</Label>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <Select
+                                            value={state.drop_off_mode ?? 'parent'}
+                                            onValueChange={(v) =>
+                                              setEditOccurrences((prev) => ({
+                                                ...prev,
+                                                [occ.id]: {
+                                                  ...state,
+                                                  drop_off_mode: v as 'parent' | 'grandparents' | 'alone',
+                                                  pick_up_mode: v as 'parent' | 'grandparents' | 'alone',
+                                                },
+                                              }))
+                                            }
+                                            onOpenChange={(open) => {
+                                              if (!open) handleSaveOccurrence(occ)
+                                            }}
+                                          >
+                                            <SelectTrigger className="bg-background">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="parent">Parent</SelectItem>
+                                              <SelectItem value="grandparents">Grandparents</SelectItem>
+                                              <SelectItem value="alone">Child goes alone</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                          {state.drop_off_mode === 'parent' && (
+                                            <Select
+                                              value={state.drop_off_parent_id ?? undefined}
+                                              onValueChange={(v) =>
+                                                setEditOccurrences((prev) => ({
+                                                  ...prev,
+                                                  [occ.id]: {
+                                                    ...state,
+                                                    drop_off_parent_id: v || null,
+                                                    pick_up_parent_id: v || null,
+                                                  },
+                                                }))
+                                              }
+                                              onOpenChange={(open) => {
+                                                if (!open) handleSaveOccurrence(occ)
+                                              }}
+                                            >
+                                              <SelectTrigger className="bg-background">
+                                                <SelectValue placeholder="Select parent" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {parents.map((p) => (
+                                                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-2">
+                                        <div className="space-y-1">
+                                          <Label className="text-xs text-muted-foreground">Drop-off</Label>
+                                          <div className="flex flex-wrap items-center gap-2">
+                                            <Select
+                                              value={state.drop_off_mode ?? 'parent'}
+                                              onValueChange={(v) =>
+                                                setEditOccurrences((prev) => ({
+                                                  ...prev,
+                                                  [occ.id]: { ...state, drop_off_mode: v as 'parent' | 'grandparents' | 'alone' },
+                                                }))
+                                              }
+                                              onOpenChange={(open) => {
+                                                if (!open) handleSaveOccurrence(occ)
+                                              }}
+                                            >
+                                              <SelectTrigger className="bg-background">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="parent">Parent</SelectItem>
+                                                <SelectItem value="grandparents">Grandparents</SelectItem>
+                                                <SelectItem value="alone">Child goes alone</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                            {state.drop_off_mode === 'parent' && (
+                                              <Select
+                                                value={state.drop_off_parent_id ?? undefined}
+                                                onValueChange={(v) =>
+                                                  setEditOccurrences((prev) => ({
+                                                    ...prev,
+                                                    [occ.id]: { ...state, drop_off_parent_id: v || null },
+                                                  }))
+                                                }
+                                                onOpenChange={(open) => {
+                                                  if (!open) handleSaveOccurrence(occ)
+                                                }}
+                                              >
+                                                <SelectTrigger className="bg-background">
+                                                  <SelectValue placeholder="Select parent" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {parents.map((p) => (
+                                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <Label className="text-xs text-muted-foreground">Pick-up</Label>
+                                          <div className="flex flex-wrap items-center gap-2">
+                                            <Select
+                                              value={state.pick_up_mode ?? 'parent'}
+                                              onValueChange={(v) =>
+                                                setEditOccurrences((prev) => ({
+                                                  ...prev,
+                                                  [occ.id]: { ...state, pick_up_mode: v as 'parent' | 'grandparents' | 'alone' },
+                                                }))
+                                              }
+                                              onOpenChange={(open) => {
+                                                if (!open) handleSaveOccurrence(occ)
+                                              }}
+                                            >
+                                              <SelectTrigger className="bg-background">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="parent">Parent</SelectItem>
+                                                <SelectItem value="grandparents">Grandparents</SelectItem>
+                                                <SelectItem value="alone">Child goes alone</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                            {state.pick_up_mode === 'parent' && (
+                                              <Select
+                                                value={state.pick_up_parent_id ?? undefined}
+                                                onValueChange={(v) =>
+                                                  setEditOccurrences((prev) => ({
+                                                    ...prev,
+                                                    [occ.id]: { ...state, pick_up_parent_id: v || null },
+                                                  }))
+                                                }
+                                                onOpenChange={(open) => {
+                                                  if (!open) handleSaveOccurrence(occ)
+                                                }}
+                                              >
+                                                <SelectTrigger className="bg-background">
+                                                  <SelectValue placeholder="Select parent" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {parents.map((p) => (
+                                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
+                                      <Switch
+                                        checked={separate}
+                                        onCheckedChange={(nextSeparate) => {
+                                          setEditOccurrences((prev) => {
+                                            const current = prev[occ.id] ?? state
+                                            if (!nextSeparate) {
+                                              // When turning off separate, align pick-up with drop-off.
+                                              return {
+                                                ...prev,
+                                                [occ.id]: {
+                                                  ...current,
+                                                  separate_pick_up: false,
+                                                  pick_up_mode: current.drop_off_mode ?? 'parent',
+                                                  pick_up_parent_id: current.drop_off_parent_id ?? null,
+                                                },
+                                              }
+                                            }
+                                            return {
+                                              ...prev,
+                                              [occ.id]: {
+                                                ...current,
+                                                separate_pick_up: true,
+                                              },
+                                            }
+                                          })
+                                        }}
+                                        className="h-4 w-7"
+                                      />
+                                      <span>Different parent for pick-up</span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )
                           })}

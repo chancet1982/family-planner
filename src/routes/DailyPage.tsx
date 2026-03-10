@@ -193,7 +193,12 @@ export function DailyPage() {
                 return (
                   <Card key={`activity-${a.id}`} className={`min-h-[48px] ${cardBg} ${cardBorder}`}>
                     <CardContent className="flex items-center justify-between p-3">
-                      <span className="font-medium text-foreground">{a.name}</span>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-foreground">{a.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {person?.name ?? ''}
+                        </span>
+                      </div>
                       <span className="text-muted-foreground">{a.start_time} – {a.end_time}</span>
                     </CardContent>
                   </Card>

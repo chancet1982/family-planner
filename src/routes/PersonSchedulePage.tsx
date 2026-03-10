@@ -180,7 +180,9 @@ export function PersonSchedulePage() {
                       className={`text-sm p-2 rounded-lg border ${cardBg} ${cardBorder}`}
                     >
                       <span className="font-medium text-foreground">{entry.item.name}</span>
-                      <span className="text-muted-foreground block">{entry.item.start_time} – {entry.item.end_time}</span>
+                      <span className="text-muted-foreground block">
+                        {entry.item.start_time} – {entry.item.end_time}
+                      </span>
                     </div>
                   )
                 })()

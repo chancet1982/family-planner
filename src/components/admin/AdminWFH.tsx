@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-const DAYS = [1, 2, 3, 4, 5, 6, 7] as const
+const DAYS = [1, 2, 3, 4, 5] as const
 const DAY_LABELS: Record<number, string> = {
   1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun',
 }
